@@ -6,7 +6,7 @@ app.use(express.static(__dirname));
 const bodyParser = require('body-parser');
 const expressSession = require('express-session')({
     secret: 'secret',
-    resave: dalse,
+    resave: false,
     saveUninitialized:false
 })
 app.use(bodyParser.json());
@@ -26,7 +26,7 @@ app.use(passport.session());
 // MONGOOSE SETUP
 
 const mongoose = require('mongoose');
-const passortLocalMongoose = require('passport-local-mongoose');
+const passportLocalMongoose = require('passport-local-mongoose');
 
 mongoose.connect('mongodb://localhost/MyDatabase',
 {useNewUrlParser: true, useUnifiedTopology: true});
@@ -36,7 +36,7 @@ const UserDetail = new Schema({
     username:String,
     password:String
 })
-UserDetail.plugin(passortLocalMongoose);
+UserDetail.plugin(passportLocalMongoose);
 const UserDetails = mongoose.model('userInfo', UserDetail, 'userInfo');
 
 // PASPORT LOCAL AUTHENTICATION
@@ -44,3 +44,75 @@ const UserDetails = mongoose.model('userInfo', UserDetail, 'userInfo');
 passport.use(UserDetails.createStrategy());
 passport.serializeUser(UserDetails.serializeUser());
 passport.deserializeUser(UserDetails.deserializeUser());
+
+// ROUTES
+
+const connectEnsureLogin = require('connect-ensure-login');
+
+
+app.post('/login',
+passport.authenticate('local', 
+(err,user, info)=>{
+    if(err){
+        return next(err);
+    }
+    if(!user){
+        return res.redirect('/login?info=' + info);
+    }
+    req.logIn(user, function(err){
+        if(err){
+            return next(err);
+        }
+        return res.redirect('/');
+    });
+    (req, res, next);
+}))
+
+
+app.get('/login',
+(req,res)=> res.sendFile('html/login.html',
+{root:__dirname}));
+
+app.get('/',
+connectEnsureLogin.ensureLoggedIn(),
+(req,res)=> res.sendFile('html/login.html',
+{root:__dirname}));
+
+app.get('/private',
+connectEnsureLogin.ensureLoggedIn(),
+(req,res)=> res.sendFile('html/private.html',
+{root:__dirname}));
+
+app.get('/user',
+connectEnsureLogin.ensureLoggedIn(),
+(req,res)=> res.send({user:req.user}));
+
+app.get('/logout',
+(req,res)=> res.logout()
+);
+
+
+// REGISTER USERS IF THEY DO NOT EXIST
+
+async function registerUser(username, password) {
+    try {
+        // Check if the user already exists
+        const existingUser = await UserDetails.findOne({ username: username });
+        if (existingUser) {
+            console.log(`User with username ${username} already exists.`);
+            return; 
+        }
+
+        // If the user does not exist, register the user
+        const newUser = new UserDetails({ username: username });
+        await UserDetails.register(newUser, password);
+        console.log(`User ${username} registered successfully.`);
+    } catch (error) {
+        console.error('Error registering user:', error);
+    }
+}
+
+// Register users
+registerUser('paul', 'password1');
+registerUser('joy', 'password2');
+registerUser('ray', 'password3');

@@ -18,6 +18,7 @@
   "homepage": "https://github.com/dynamicProjects/authApp#readme",
   "dependencies": {
     "body-parser": "^1.20.2",
+    "connect-ensure-login": "^0.1.1",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
     "mongoose": "^8.3.1",
