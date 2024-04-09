@@ -7,7 +7,8 @@ const bodyParser = require('body-parser');
 const expressSession = require('express-session')({
     secret: 'secret',
     resave: false,
-    saveUninitialized:false
+    saveUninitialized:false,
+  
 })
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
@@ -51,22 +52,24 @@ const connectEnsureLogin = require('connect-ensure-login');
 
 
 app.post('/login',
-passport.authenticate('local', 
-(err,user, info)=>{
-    if(err){
+  (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+      if (err) {
         return next(err);
-    }
-    if(!user){
+      }
+      if (!user) {
         return res.redirect('/login?info=' + info);
-    }
-    req.logIn(user, function(err){
-        if(err){
-            return next(err);
+      }
+      req.logIn(user, function (err) {
+        if (err) {
+          return next(err);
         }
         return res.redirect('/');
-    });
-    (req, res, next);
-}))
+      });
+    })(req, res, next);
+  }
+);
+
 
 
 app.get('/login',
@@ -75,7 +78,7 @@ app.get('/login',
 
 app.get('/',
 connectEnsureLogin.ensureLoggedIn(),
-(req,res)=> res.sendFile('html/login.html',
+(req,res)=> res.sendFile('html/index.html',
 {root:__dirname}));
 
 app.get('/private',
@@ -88,8 +91,17 @@ connectEnsureLogin.ensureLoggedIn(),
 (req,res)=> res.send({user:req.user}));
 
 app.get('/logout',
-(req,res)=> res.logout()
+  (req, res) => {
+    req.logout((err) => { 
+      if (err) {
+        return next(err);
+      }
+      res.redirect('/login');
+    });
+  }
 );
+
+
 
 
 // REGISTER USERS IF THEY DO NOT EXIST
